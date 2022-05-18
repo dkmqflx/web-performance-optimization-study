@@ -93,3 +93,102 @@
     참고하실 수 있는 링크를 하나 남겨드리겠습니다.
     구글에서 정리한 "Lighthouse 결과의 변동성"에 대한 글입니다.
     [https://developers.google.com/web/tools/lighthouse/variability](https://developers.google.com/web/tools/lighthouse/variability)
+
+---
+
+### 1.5 이미지 사이즈 최적화
+
+- Properly size images
+
+  - Serve images that are appropriately-sized to save cellular data and improve load time.
+    - 이미지를 적절한 사이즈로 압축해서 셀룰러 데이터와 로드 타임을 향상시켜라
+  - 이미지 사이즈와 최적화 했을 때 얼마만큼 줄일 수 있는지 확인할 수 있다.
+  - 이미지 목록에 있는 것을 클릭하면 Element 탭으로 이동해서 이미지를 확인할 수 있다
+  - 예를들어, Rendered size: 120 × 120 px, Intrinsic size: 1200 × 1200 px 인 상황을 가정해보자
+  - 넓이로 따지면 우리가 실제 필요한 사이즈보다 100배보다 큰 이미지를 사용하고 있는 상황이다.
+  - 이 때 이미지를 화면에 표시되는 이미지의 사이즈로 꼭 불러와야 하는 것은 아니다
+  - 요즘 많이 쓰는 레티나 디스플레이는 같은 공간에 더 많은 픽셀을 그릴 수 있기 때문에 너비 기준으로 2배 정도 큰 이미지를 사용하는 것이 적절다.
+  - 즉, 240 x 240 px이미지를 사용하는게 적절하다
+
+- 이 이미지를 줄일 수 있는 방법 ?
+
+  - 현재 이 이미지는 api를 통해서 받아오고 있다
+  - 네트워크 탭의 articles의 response 에서 확인해보면, image라는 프로퍼티의 값으로 이미지를 받아오고 있다.
+  - 이 이미지가 만약 자체 서버에 저장되어 있는 static 이미지라면 직접 이미지를 잘라서 올리면 되는데 api를 통해서 이미지를 받아오는 경우 어떻게 줄일 수 있을까 ?
+  - 여기서 생각할 수 있는게 cloudinary나 imgix 같은 이미지 CDN을 사용하는 것이다
+
+- CDN
+
+  - Contents Delivery Network
+  - 물리적 거리의 한계를 극복하기 위해 소비자(사용자)와 가까운 곳에 컨텐츠 서버를 두는 기술
+  - 한국에 있는 사용자가 미국에 있는 서버에 이미지를 다운 받을 때 아무리 인터넷이 빨라졌다고 해도, 사용자와 서버 사이에는 엄청난 물리적 거리가 있기 때문에 다운로드 받는 시간이 상당히 많이 걸린다
+  - 미국에 있는 서버를 미리 한국에 있는 서버에 복사해두고 사용자가 사진을 다운로드 할 때 한국에 있는 서버에서 바로 다운로드 해온다면 물리적 거리가 가까우니까 시간도 많이 줄어들 것이다
+
+- Image CDN
+
+  - 하지만 이 CDN과 Image CDN은 조금 다르다
+  - 정확히는 Image Processing CDN이라고 하는데, Image CDN은 기본적인 CDN 의 개념과 이미지를 사용자에게 보내기 전에 특정형태로 가공해서
+    예를 들면 사이즈를 줄이거나 이미지 포맷을 마꾸거나 하는 처리 과정을 거쳐서 사용자에게 이미지를 전달하게 된다.
+  - 즉 서버에서 1200 px 사이즈의 이미지를 120px로 가공해서 사용자에게 전달해주는 것이다.
+  - Image CDN의 예시
+
+    ```shell
+    http://cdn.image.com?src=[img src]&width=200&height=100
+
+    # img src : 내가 전달하고자 하는 이미지 소스
+    # &width=200&height=100 : 내가 원하는 결과 이미지 정보를 parameter로 전달
+    # 원본 이미지가 가공된다.
+    ```
+
+- [브런치](https://brunch.co.kr/)의 한 이미지를 예로 들어 보자
+
+```shell
+https://img1.daumcdn.net/thumb/C240x0/?fname=http://t1.daumcdn.net/brunch/service/user/9tkU/image/MqdiMMegItU002H1o44CNzdXXSg.png
+
+# daumcdn 이라는 cdn 도메인이 있고
+# fname= 필드로 어떤 이미지의 주소가 붙게 된다
+
+```
+
+```shell
+http://t1.daumcdn.net/brunch/service/user/9tkU/image/MqdiMMegItU002H1o44CNzdXXSg.png
+
+# 원본 이미지로 들어가 보면 이전과 달리 이미지의 크기가 더 큰 것을 확인할 수 있다.
+
+```
+
+- 즉, 이미지 CDN을 거쳐서 사용자에게 작은 사이즈로 제공되는 것을 확인할 수 있다.
+- 여기서는 이미지 CDN을 직접 구축했지만, 직접 구축하지 않고 이미지 CDN 솔루션을 사용할 수 있다.
+- 대표적으로 imgix라는 서비스가 있다
+- 이 서비스를 사용하면 CDN을 구축하지 않아도 된다.
+- 이 강의에서는 이미지 CDN을 사용하지 않는다. 이 강의에서는 최적화 포인트를 찾는데 중점을 두기 때문
+
+- `components/Article/index.js`에 보면 img 태그가 있는 것을 확인할 수 있다.
+
+```js
+<img
+  src={props.image + getParametersForUnsplash({ width: 1200, height: 1200, quality: 80, format: 'jpg' })}
+  alt="thumbnail"
+/>
+```
+
+- 이미지를 넣는 것 뿐 아니라 width와 height를 정하고 있다.
+- 이를 통해 앞서 Element 탭에서 확인한 이미지가 이 width와 height를 통해서 정해진 것을 알 수 있다
+- 여기 있는 숫자 값을 변경하면 이미지의 사이즈도 줄어든 다는 것을 알 수 있다
+
+```js
+<img
+  src={props.image + getParametersForUnsplash({ width: 240, height: 240, quality: 80, format: 'jpg' })}
+  alt="thumbnail"
+/>
+
+// unsplash에 데이터를 요청하는데, unsplash가 이미지 CDN 역할을 한다고 볼 수 있다.
+```
+
+- 새로고침 후 다시 Element 탭에서 확인해보면 240 x 240 px로 이미지 크기가 줄어든 것을 확인할 수 있다.
+
+- 다시 lighthoutse 탭에서 Generate report 클릭 한 후 결과를 확인해본다
+- OPPORTUNITIES 항목을 확인해보면 Performance 점수는 거의 변한게 없는데, Properly size images 항목이 없어진 것을 확인할 수 있다
+- 즉 이미지에 대한 성능저하가 사라진 것을 확인할 수 있다
+- 이렇게 성능을 한단계 더 향상시킬 수 있다
+-
