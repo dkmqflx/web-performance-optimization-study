@@ -259,6 +259,9 @@ http://t1.daumcdn.net/brunch/service/user/9tkU/image/MqdiMMegItU002H1o44CNzdXXSg
 
 - 이 강의에서는 이미지 CDN을 사용하지 않는다. 이 강의에서는 최적화 포인트를 찾는데 중점을 두기 때문
 
+- 여기서는 코드를 통해 문제를 해결한다.
+
+
 - `components/Article/index.js`에 보면 img 태그가 있는 것을 확인할 수 있다.
 
 ```js
@@ -525,9 +528,9 @@ http://t1.daumcdn.net/brunch/service/user/9tkU/image/MqdiMMegItU002H1o44CNzdXXSg
 
 - 그 답은 Main 탭을 보면 Articles 컴포넌트에 `removeSpecialCharacter` 라는 작업을 실행하는 것을 확인할 수 있느데 이 작업이 컴포넌트의 모든 시간을 잡아 먹고 있었다
 
-`removeSpecialCharacter` 여러개로 쪼개져 있는데 실제로 `removeSpecialCharacter` 작업이 여러번 실행되는 것이 아니라 하나의 연결된 작업 이었는데 너무 많은 작업 리소스를 사용하다 보니 중간 중간에 가비지 컬렉터에 의해서 중간중간 끊긴 것이다
+- `removeSpecialCharacter` 여러개로 쪼개져 있는데 실제로 `removeSpecialCharacter` 작업이 여러번 실행되는 것이 아니라 하나의 연결된 작업 이었는데 너무 많은 작업 리소스를 사용하다 보니 중간 중간에 가비지 컬렉터에 의해서 중간중간 끊긴 것이다
 
-- 아래에 있는 Minor GC를 보고 알 수 있는데 Minor GC는 가바지 컬렉터의 작업인데 메모리에 여유가 없을 때 메모리 정리를 해주는 작업
+- 아래에 중간 중간 있는 Minor GC를 보고 알 수 있는데 Minor GC는 가바지 컬렉터의 작업인데 메모리에 여유가 없을 때 메모리 정리를 해주는 작업
 
 ---
 
@@ -630,16 +633,18 @@ http://t1.daumcdn.net/brunch/service/user/9tkU/image/MqdiMMegItU002H1o44CNzdXXSg
 
 - 그리고 인자로 전달되는 str도 api에서 주는 굉장히 긴 마크다운 문자열일 텐데 이를 많은 반복과 비효율적인 함수를 통해서 처리하니 느릴 수 밖에 없다
 
-- Bottleneck 해결방안
+### Bottleneck 해결방안
 
-  1. 특수 문자를 효율적으로 제거하기
+1. 특수 문자를 효율적으로 제거하기
 
-  - replace 함수와 정규식 사용
+- replace 함수와 정규식 사용 또는 
 
-  - 마크다운의 특수문자를 지워주는 라이브러리 사용(remove-markdown)
-    - 이런 라이브러리 사용하면 효과적이고 깔끔한 결과 얻을 수 있지만, 이 강의에서는 직접 구현하는 첫번째 방법으로 최적화 해준다
+- 마크다운의 특수문자를 지워주는 라이브러리 사용(remove-markdown)
+  
+  - 이런 라이브러리 사용하면 효과적이고 깔끔한 결과 얻을 수 있지만, 이 강의에서는 직접 구현하는 첫번째 방법으로 최적화 해준다
 
-  2. 작업하는 양 줄이기
+
+2. 작업하는 양 줄이기
 
 - 기본적으로 api를 통해 제공되는 마크다운 문자열의 길이는 굉장히 길다.
 
@@ -653,10 +658,13 @@ http://t1.daumcdn.net/brunch/service/user/9tkU/image/MqdiMMegItU002H1o44CNzdXXSg
 
 - 따라서 200자, 많아봐야 300자만 검사하는 것만으로도 충분하다
 
-- 코드를 수정하고 다시 Performance 탭에서 검사해보면 함수가 너무 작아져서 확인하기 힘들어진 것을 확인할 수 있다
+- 코드를 수정하고 다시 Performance 탭에서 검사해보면 Article 컴포넌트와 removeSpecialCharacter 함수가 차지하는 크기가 이전에 비해 너무 작아져서 확인하기 힘들어진 것을 확인할 수 있다
 
 - 시간으로 보면 함수를 한번 호출하는데 0.14ms가 걸리는 것을 확인할 수 있는데 이를 통해 굉장히 짧아진 것을 확인할 수 있다
 
 - 또한 lighthouste에서 다시 검사해보면 Performance 점수가 굉장히 높아진 것을 확인할 수 있다
 
 - 그리고 Diagnostics의 Minimize main-thread work, Reduce JavaScript execution time 항목도 줄어든 것을 확인할 수 있다
+
+
+
