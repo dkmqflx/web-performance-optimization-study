@@ -74,7 +74,7 @@ const SurveyChart = () => {
     4: {0: 605, 1: 736, 2: 272, 3: 287}
     5: {0: 701, 1: 544, 2: 655}
    */
-  console.log(filter);
+
   return (
     <SurveyChartWrapper>
       <SurveyChartTitle>설문 결과</SurveyChartTitle>
