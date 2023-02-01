@@ -30,6 +30,13 @@ function App() {
 
     LazyImageModal.preload();
     // 똑같이 마지막에 컴포넌트 로드되는 것을 확인할 수 있따
+
+    const img = new Image();
+
+    img.src =
+      'https://stillmed.olympic.org/media/Photos/2016/08/20/part-1/20-08-2016-Football-Men-01.jpg?interpolation=lanczos-none&resize=*:800';
+
+    // 네트워크 탭 확인하면 모달에 관한 chunk 파일과 이미지 다운로드 받은 것 확인할 수 있다
   }, []);
 
   // const handleMouseEnter = () => {
