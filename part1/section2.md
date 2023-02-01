@@ -287,3 +287,448 @@ $ npx cra-bundle-analyzer
     - 그건 create-react-app의 기본 webpack 설정 때문에 그렇습니다.
 
     - 기본적으로 cra의 webpack은 node_modules 라이브러리들과 서비스 코드(src)를 구분하여 번들링 합니다.
+
+---
+
+## 2-6) 컴포넌트 Preloading
+
+- 지난 강의에서는 모달 컴포넌트를 code splitting을 통해 동적으로 불러 올 수 있도록 했다.
+
+- 하지만 막상 모달을 띄울 때 바로 뜨지 않는다
+
+- 모달에 코드를 추가적으로 로드해야 되기 때문에 약간의 딜레이가 생길 수 있다
+
+<img src='./images/2-6-2.png'>
+
+- 그림처럼 클릭하는 순간 모달에 관한 파일을 불러온다
+
+- 그리고 모달 파일이 모두 불러와 지면 자바스크립트를 Evaluate하는 시간이 있다.
+
+- 이게 끝나고 실질적으로 모달을 띄우는 코드가 실행되고 이 순간에 모달이 뜨개 된다
+
+- 즉 최초 페이지에서는 성능이 조금 빨라졌지만
+
+- 모달을 띄울 때는 오히려 성능이 더 느려졌다
+
+- 이를 개선하는 방법이 Preloading
+
+- 버튼을 클릭해서 모달을 열기 전에 미리 모달과 관련된 코드를 로드를 해두는 것이다
+
+- 이렇게 되면 클릭한 순간에 바로 모달이 뜰 수 있다
+
+- 문제는 사용자가 버튼을 언제 클릭할지 모르기 때문에 파일들도 언제 로드될지 애매하다는 것
+
+- 여기서 생각할 수 있는 Preload 타이밍이 두가지가 있다
+
+- 컴포넌트 Preload 타이밍
+
+  - 1. 버튼 위에 마우스를 올려 놨을 때
+
+  - 2. 최초 페이지 로드가 되고, 모든 컴포넌트의 마운트가 끝났을 때 모달 코드를 로드하는 것
+
+- 버튼 위에 마우스를 올려 놨을 때
+
+  - 마우스를 버튼 위에 올려놓는 바로 그 순간 모달을 로드하는 것이다
+
+```js
+const LazyImageModal = lazy(() => import('./components/ImageModal'));
+// Code Splitting을 통해 코드가 분할되어 있다
+
+function App() {
+  const [showModal, setShowModal] = useState(false);
+
+  const handleMouseEnter = () => {
+    // 마우스가 올라왔을 때 import가 실행되니까 모달과 관련된 파일이 로드 된다
+    // 네트워크 탭 확인해보면 두개의 파일이 로드가 된 것을 확인할 수 있다
+    import('./components/ImageModal');
+  };
+
+  return (
+    <div className='App'>
+      <Header />
+      <InfoTable />
+      <ButtonModal
+        onClick={() => {
+          setShowModal(true);
+        }}
+        onMouseEnter={handleMouseEnter}
+      >
+        올림픽 사진 보기
+      </ButtonModal>
+      <SurveyChart />
+      <Footer />
+      <Suspense fallback={null}>
+        {showModal ? (
+          <LazyImageModal
+            closeModal={() => {
+              setShowModal(false);
+            }}
+          />
+        ) : null}
+      </Suspense>
+    </div>
+  );
+}
+
+export default App;
+```
+
+- 보통 어떤 버튼을 클릭 할 때, 마우스를 올리고 클릭하는 순간까지 빠르면 0.2초, 또는 0.5초 정도 까지 시간이 걸린다
+
+- 아주 찰나의 순간이지만 컴퓨터가 새로운 파일을 로드하기에는 도움이 되는 정도의 시간
+
+- 그런데 만약 모듈 파일이 너무 커서 로드하는데 1초 이상은 필요한 경우라면 마우스를 버튼 위에 올렸을 때 보다 더 먼저 파일을 로드할 필요가 있다
+
+- 생각해 볼 수 있는 타이밍은 모든 컴포넌트가 로드가 완료된 후 여유가 생겼을 때 모듈을 미리 로드하는 것이다
+
+- 즉, App 컴포넌트의 componentDidMount 순간
+
+- 최초 페이지 로드가 되고, 모든 컴포넌트의 마운트가 끝났을 때 모달 코드를 로드
+
+```js
+const LazyImageModal = lazy(() => import('./components/ImageModal'));
+
+function App() {
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    import('./components/ImageModal');
+  }, []);
+
+  return (
+    <div className='App'>
+      <Header />
+      <InfoTable />
+      <ButtonModal
+        onClick={() => {
+          setShowModal(true);
+        }}
+      >
+        올림픽 사진 보기
+      </ButtonModal>
+      <SurveyChart />
+      <Footer />
+      <Suspense fallback={null}>
+        {showModal ? (
+          <LazyImageModal
+            closeModal={() => {
+              setShowModal(false);
+            }}
+          />
+        ) : null}
+      </Suspense>
+    </div>
+  );
+}
+
+export default App;
+```
+
+- 네트워크 탭 확인해보면 마지막에 모달과 관련된 번들 파일 다운로드 받은 것을 확인할 수 있다
+
+- Waterfall 항목보면 로드가 된 순간을 다른 파일과 비교해서 확인할 수 있다
+
+- 지금을 단일 컴포넌트르 미리 import 해후지만
+
+- 만약 여러 컴포넌트를 preload 해줄 필요가 있다면 매번 import를 직접 써주는 것이 번거롭다
+
+- 이 때 팩토리 패턴을 사용한다
+
+```js
+function lazyWithPreload(importFunction) {
+  const Component = React.lazy(importFunction);
+  // 이전의 아래 코드와 같다
+  // const LazyImageModal = lazy(() => import('./components/ImageModal'));
+
+  Component.preload = importFunction;
+  // preload라는 속성을 추가한다
+
+  return Component;
+}
+
+const LazyImageModal = lazyWithPreload(() => import('./components/ImageModal'));
+
+function App() {
+  const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    LazyImageModal.preload();
+    // 똑같이 마지막에 컴포넌트 로드되는 것을 확인할 수 있따
+  }, []);
+
+  return (
+    <div className='App'>
+      <Header />
+      <InfoTable />
+      <ButtonModal
+        onClick={() => {
+          setShowModal(true);
+        }}
+      >
+        올림픽 사진 보기
+      </ButtonModal>
+      <SurveyChart />
+      <Footer />
+      <Suspense fallback={null}>
+        {showModal ? (
+          <LazyImageModal
+            closeModal={() => {
+              setShowModal(false);
+            }}
+          />
+        ) : null}
+      </Suspense>
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
+
+- Q. 자바스크립트 평가 속도가 뭔가요?
+
+  - 해당회차 영상 0:19초에 말씀하신 자바스크립트 평가속도가 무엇을 뜻하는걸까요?
+
+  - 구글링해도 나오지 않아서 질문드립니다!
+
+- A. 자바스크립트 평가 속도에 대해서 질문을 주셨는데요.
+
+    <img src='./images/2-6-1.png'>
+
+  - 위의 이미지처럼 자바스크립트를 실행하기 전에 다운로드 된 자바스크립트를 "Evaluate Script" 하게 되는데, 강의에서는 이를 가리켜 "자바스크립트 평가 속도" 라고 말씀드렸습니다.
+
+  - 해당 작업에는 자바스크립트의 파싱과 컴파일, 메모리 상의 로드하는 작업들이 포함됩니다.
+
+<br/>
+
+- Q. React.lazy 컴포넌트는 실행되지 않는 건가요?
+
+  - 호버시에 동적으로 import를 하는 방식을 사용할때,
+
+  - 코드 최상단에는 ImageModal import 구문을 포함한 콜백함수가 React.lazy의 인수로 들어가 있습니다.
+
+  ```js
+  const LazyImageModal = lazy(() => import('./components/ImageModal'));
+  ```
+
+  - 그렇다면 호버시에 import를 한다면, 이때 ImageModal의 페이지를 import를 하고,
+
+  - React.lazy로 된 컴포넌트(LazyImageModal)가 호출되었을때는, 이미 import가 호출되었다고 JS가 판단해서 lazy에 들어가있는 import 콜백함수는 호출되지 않는 프로세스 인건가요?
+
+  ```js
+  function App() {
+    return (
+      <div className='App'>
+        <Header />
+        <InfoTable />
+        <ButtonModal
+          onClick={() => {
+            setShowModal(true);
+          }}
+          onMouseEnter={handleMouseEnter}
+        ></ButtonModal>
+        // 올림픽 사진 보기
+        <SurveyChart />
+        <Footer />
+        <Suspense fallback={null}>
+          {showModal ? (
+            <LazyImageModal
+              closeModal={() => {
+                setShowModal(false);
+              }}
+            />
+          ) : null}
+        </Suspense>
+      </div>
+    );
+  }
+  ```
+
+  - 제가 헷갈려하는 부분은 React.lazy로 정의한 컴포넌트가 import를 호출할것 같은데
+
+  - 호버시때 미리 import한 값이 있어서, JS는 이미 import한 값이 있다고 판단해서 안가져 오는게 맞는지 궁금합니다.
+
+  - 그리고 아래의 코드는 왜 틀린 코드인지 궁금합니다 ㅠ
+
+  ```js
+  let LazyImageModal;
+
+  function App() {
+    const [showModal, setShowModal] = useState(false);
+
+    function handleMouseEnter(params) {
+      LazyImageModal = import('./components/ImageModal');
+    }
+  }
+  ```
+
+---
+
+- A. 동적 import 에 대해서 질문을 주셨는데요,
+
+  - 여기서 이해하셔야 할 것은 흔히 우리가 사용하고 있는 import 'module' 또는 import \* from 'module' 이 아닌 import('module') 이 표현식입니다.
+
+  - import('module') 는 빌드 시에 모듈을 import 하는 것이 아닌, 런타임 시에 동적으로 모듈을 import 하며, 실제 module를 바로 리턴하는게 아니라 해당 모듈을 담고 있는(resolve 하는) Promise 객체를 반환합니다.
+
+  - 동적으로 모듈을 가져도는 동작은 시간이 소요되는 동작이기 때문에 이걸 비동기로 처리하기 때문입니다.
+
+  - 즉, 다음과 같이 사용해야 됩니다.
+
+  ```js
+  import('module').then((module) => {
+    // module을 사용하여 원하는 동작
+  });
+  ```
+
+  - 하지만 여기서 저 module이 단순 유틸성 함수라면 상관없지만, 우리같이 컴포넌트라면 import가 된 시점에 setState 를 하여 React의 Render Cycle로 가져올 필요가 있겠죠?
+
+  - 그 과정을 쉽게 해주는 것이 React.lazy와 React.Suspense 입니다.
+
+  - 그리고 hover시 import를 해두면, 미리 해당 모듈을 네트워크를 통해 불러오게 되고 (사용하지는 않더라도)
+
+  - 다른 곳에서 lazy 안에서 import를 할 때는 이미 네트워크 상에서는 로드된 데이터를 바로 사용할 수 있으므로 시간이 단축됩니다.
+
+<br/>
+
+- Q. component.preload = importFunction 관련 질문 드립니다.
+
+  - 안녕하세요 ! 강의를 들으면서 실습하다 에러가 나서 질문 올립니다.
+
+  ```js
+
+  lazyWithPreload(importFunction){
+  const Component = React.lazy(importFunction);
+  Component.preload = importFunction;
+  return component;
+  }
+  ```
+
+  - 여기 부분을 똑같이 따라하려고 하는데 component.preload 부분에서
+
+  - Property 'preload' does not exist on type 'LazyExoticComponent >'
+
+  - 이와 같은 에러가 납니다. typescript에서는 위와 같은 형태를 가지지는 못하는건가요?
+
+- A. 타입스크립트에서 컴포넌트에 preload 속성을 추가하는 부분을 질문주셨는데요,
+
+  - 기본적으로 컴포넌트 타입에는 preload라는 속성이 없기 때문에 타입스크립트에서는 에러나는 것이 정상입니다.
+
+  - 이 때 해결방법으로는 직접 커스텀 타입을 정의하여 넣어줘야 되는데요, 다음과 같이 작성할 수 있습니다.
+
+  ```ts
+  interface PreloadComponent
+    extends React.LazyExoticComponent<React.ComponentType<any>> {
+    preload?: any;
+  }
+  ```
+
+- Q. Factory pattern에 대해서 궁금한 점이 있습니다
+
+  ```js
+  function lazyWithPreload(importFunction) {
+    const Component = lazy(importFunction);
+    Component.preload = importFunction;
+    return Component;
+  }
+  ```
+
+  - const LazyImageModal = lazyWithPreload(() => import("./components/ImageModal"));
+
+  - 이 부분에 대해서 여러번 생각을 해봐도 코드의 동작 방식이 잘 이해가 되지 않는데요, importFunction에 의해서 lazy하게 로딩되는 Component를 반환하는 것은 알겠는데, preload를 통해서 importFunction을 다시 넣어주고 그 함수를 useEffect에서 다시 호출을 해준다는 개념이 좀 어색합니다.
+
+  - preload를 호출함으로써 importFunction이 호출되는데, 그 결과가 Component에 담기는 거라면 const Component = lazy(importFunction) 이 하는 역할이 뭘까요..?
+
+- A. Component의 Preloading 코드에 대해서 질문을 주셨는데요, 해당 내용은 저렇게 꼭 써야한다는 것이 아니라 레이지 로딩하는 코드가 많아 지게 되면 위와 같은 펙토리 패턴으로 효율적으로 동적 로딩 컴포넌트들을 관리할 수 있다는 관점에서 얘기한거라 조금 헷갈리셨을 수도 있다고 생각합니다.
+
+  - 이해를 돕기 위해 굳이 함수를 사용하지 않고 표현해보면 다음과 같습니다.
+
+  ```js
+  // 단순 컴포넌트 동적 로딩 코드 (이렇게 하면 Suspense 안에서 해당 컴포넌트가 사용되는 순간 import가 됩니다.)
+  const LazyImageModal = lazy(() => import('./components/ImageModal'));
+
+  // 위 코드만 쓰게되면 단순 코드 분할 및 지연 로딩 일뿐 preloading을 한 건 아니죠?
+  // 그래서 해당 컴포넌트가 실제 사용되기 이전 시점에 import(즉, preload)하기 위해서는
+  // 적절한 시점에 단순 컴포넌트를 import하는 코드가 필요합니다.
+
+  // 그 작업을 해주는 코드를 펙토리 패턴 적용 전에는 useEffect에서 직접 import 구문을 호출해줬는데,
+  // 이제는 미리 import 구문을 해당 컴포넌트에 preload라는 커스텀 속성을 만들어 넣어줬습니다.
+
+  // 이렇게 하면, useEffect 안에서 직접 import를 호출할 필요없이,
+  // LazyImageModal.preload();
+  //이렇게만 호출하면 됩니다.
+  LazyImageModal.preload = () => import('./components/ImageModal');
+  ```
+
+  - 위 코드에 주석으로 코드에 대한 설명을 드렸습니다.
+
+  - 아마 제 생각에는 컴포넌트가 동적 로딩되는 과정에서 이해가 안 되신거 같아 추가적인 설명을 드리자면,
+
+  - lazy(() => import()) 를 하는 순간 컴포넌트가 import 되는 것이 아닙니다.
+
+  - 해당 코드는 특정 컴포넌트(또는 모듈)을 동적으로 로드 하겠다는 표시이고 번들 파일에서 분할(코드 분할)합니다.
+
+  - 그리고 Suspense 안에서 해당 모듈이 사용되는 순간 분할된 코드를 로드하여 실행을 하는 방식입니다.
+
+  - 하지만, 우리가 원하는건 사용되는 순간 분할된 코드를 로드하는 것이 아닌, 사용하기 전 시점에 미리 코드를 로드하여 사용하는 순간에는 딜레이(분할된 코드가 다운로드되는 시간)없이 사용하고자 하는 것입니다.
+
+  - 그것을 위해서는 동적으로 파일을 로드하는 코드인 import 구문을 직접 호출해줘야합니다.
+
+  - 이것은 lazy에서 호출하는 import와 다릅니다. lazy 안의 import 구문은 해당 컴포넌트가 사용되는 시점에 해당 코드를 자동으로 로드하기 위해 사용되는 코드이고, 지금 얘기하는 직접 호출하는 import는 해당 컴포넌트가 사용될지와 상관없이 그냥 로드하는 겁니다.
+
+  - 이렇게하면, 해당 코드는 다운로드되고 시간이 지나 실제 해당 코드를 사용하는 순간이 오면 굳이 새로 다운로드 하지 않아도 기존에 다운로드된 코드를 그대로 활용할 수 있게됩니다. 즉, 딜레이가 사라지는 거죠.
+
+  - 코드에서 LazyImageModal.preload 에 import 구문을 넣는 것은 그것을 위한 것이고,
+
+  - useEffect에서 LazyImageModal.preload()를 호출하는 것은 preload를 위해 import 구문을 직접 실행하여 코드를 미리 로드해 두기 위함입니다.
+
+<br/>
+
+- Q. Suspense 관련해서 질문드립니다
+
+  - 다름이 아니라, 팩토리 패턴으로 리팩토링 한 코드에 대해 질문이 있어서 글을 적게 되었습니다.
+
+    1. lazy를 사용하지 않고 import('') 구문 만으로는 동적으로 모듈을 임포트 할 수 없나요??
+
+    2. 컴포넌트가 모두 마운트 된 후 레이지 컴포넌트가 동적으로 임포트가 모두 완료된 상태인데도 suspense가 꼭 필요하나요?? 레이지 컴포넌트에 접근할 땐 이미 임포트가 완료된 후라는 생각이 들어서 여쭤봅니다!
+
+- A.
+
+  1. import 함수는 Promise를 반환하는 비동기 함수입니다. import한 모듈을 인자로 받아서 처리하는 식으로 사용죠.
+
+  ```js
+  import { add } from './math';
+
+  console.log('1 + 4 =', add(1, 4));
+
+  //-------------------
+
+  import('add').then((module) => {
+    const { add } = module;
+
+    console.log('1 + 4 =', add(1, 4));
+  });
+  ```
+
+  - 위 예시에서 위의 코드는 모듈을 정적 로딩을 한 경우고 아래는 동적 로딩을 한 경우입니다.
+
+  - 마찬가지로 단순히 컴포넌트를 동적으로 import 하면 Promise를 통해 컴포넌트 객체가 전달됩니다.
+
+  - 이때 리액트의 컴포넌트를 렌더링 할 때는 Promise를 통해 받아온 컴포넌트 객체를 Promise 밖으로 꺼내야 합니다.
+
+  - 이것을 도와주는 것이 바로 lazy 함수입니다.
+
+  - 정리하면, 동적 로딩은 import 함수만으로 충분합니다.
+
+  - 다만, 비동기한 컴포넌트 라이프사이클 내에서 동적 로딩한 컴포넌트를 제대로 전달받기 위해서는 lazy 함수를 사용해야 합니다.
+
+  - 물론, 본인이 lazy와 같은, Promise로 받은 컴포넌트 객체를 밖으로 빼는 함수를 직접 구현하셔도 됩니다. (이것은 일반적인 API(비동기) 데이터를 로드하는 것과 비슷합니다.)
+
+  2. 지연 로딩(lazy loading) 하는 경우, 사실 상 Suspense의 loading 분기를 타지 않을 겁니다.
+
+  - 다만, 지연 로딩되는 컴포넌트가 항상 미리 로드(import) 된다는 보장은 없습니다.
+
+  - 타이밍에 따라 제때 로드가 되지않아 바로 렌더링을 못할 수도 있습니다.
+
+  - 컴포넌트의 Preload가 완벽하게 보장된다면 상관없겠지만, 이런 경우는 드물기 때문에 Suspense를 항상 같이 써주시는게 좋습니다.
