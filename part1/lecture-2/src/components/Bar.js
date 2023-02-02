@@ -4,6 +4,7 @@ import styled from 'styled-components';
 // 각 항목의 막대 그래프를 나타내는 컴포넌트
 
 const Bar = (props) => {
+  console.log(props);
   return (
     <BarWrapper onClick={props.handleClickBar} isSelected={props.isSelected}>
       <BarInfo>
