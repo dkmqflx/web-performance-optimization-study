@@ -248,6 +248,44 @@ $ npx cra-bundle-analyzer
 
 - 그리고 추가적인 이미지 모달에 관련된 소스가 분리되어 있는데 이것은 cra 기본적인 설정 때문에 라이브러리와 우리가 작성한 modal 소스 파일이 분리되어 있는 것이다
 
+```js
+// import ImageModal from './components/ImageModal';
+
+const LazyImageModal = lazy(() => import('./components/ImageModal'));
+// Code Splitting을 통해 코드가 분할되어 있다
+
+function App() {
+  const [showModal, setShowModal] = useState(false);
+
+  return (
+    <div className='App'>
+      <Header />
+      <InfoTable />
+      <ButtonModal
+        onClick={() => {
+          setShowModal(true);
+        }}
+      >
+        올림픽 사진 보기
+      </ButtonModal>
+      <SurveyChart />
+      <Footer />
+      <Suspense fallback={null}>
+        {showModal ? (
+          <LazyImageModal
+            closeModal={() => {
+              setShowModal(false);
+            }}
+          />
+        ) : null}
+      </Suspense>
+    </div>
+  );
+}
+
+export default App;
+```
+
 ---
 
 - Q. 번들파일 질문
@@ -331,6 +369,9 @@ $ npx cra-bundle-analyzer
   - 마우스를 버튼 위에 올려놓는 바로 그 순간 모달을 로드하는 것이다
 
 ```js
+// import ImageModal from './components/ImageModal';
+// 주석 처리 안하면, 마우스 호버 해도 아무런 변화가 없는데
+// 그 이유는 동적으로 불러오지 않기 때문이다
 const LazyImageModal = lazy(() => import('./components/ImageModal'));
 // Code Splitting을 통해 코드가 분할되어 있다
 
