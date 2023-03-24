@@ -1,9 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
 // import video from '../assets/banner-video.mp4';
 import video from '../assets/_banner-video.mp4';
 import video_webm from '../assets/_banner-video.webm';
+import FontFaceObserver from 'fontfaceobserver';
 
 function BannerVideo() {
+  const [isFontLoaded, setIsFontLoaded] = useState(false);
+
+  const font = new FontFaceObserver('BMYEONSUNG');
+
+  useEffect(() => {
+    font.load().then(function () {
+      console.log('BMYEONSUNG has loaded');
+      setIsFontLoaded(true);
+      // useEffect 에 넣지 않으면 로그가 세번찍히는데
+      // 렌더링 될 때 마다 함수가 실행되기 때문
+    });
+  }, []);
+
   return (
     <div className='BannerVideo w-full h-screen overflow-hidden relative bg-texture'>
       <div className='absolute h-screen w-full left-1/2'>
@@ -17,7 +32,13 @@ function BannerVideo() {
           <source src={video} type='video/mp4' />
         </video>
       </div>
-      <div className='w-full h-full flex justify-center items-center'>
+      <div
+        className='w-full h-full flex justify-center items-center'
+        style={{
+          opacity: isFontLoaded ? 1 : 0,
+          transition: 'opacity 0.3s ease',
+        }}
+      >
         <div className='text-white text-center'>
           <div className='text-6xl leading-none font-semibold'>KEEP</div>
           <div className='text-6xl leading-none font-semibold'>CALM</div>
