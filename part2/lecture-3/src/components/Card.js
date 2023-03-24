@@ -17,9 +17,12 @@ function Card(props) {
         // console.log(entry);
         //   entry.isIntersecting : 화면 안에 이 요소가 들어와 있는지 아닌지를 나타내는 값으로 여기서 가장 중요한 요소
         if (entry.isIntersecting) {
+          const target = entry.target;
+          const previousSibling = target.previousSibling;
           console.log('is Intersecting');
 
-          entry.target.src = entry.target.dataset.src;
+          target.src = target.dataset.src;
+          previousSibling.srcset = previousSibling.dataset.srcset;
           // entry.target이 img 요소
           // 화면에 img 요소가 보일 때 src 값이 생긴다.
           // 그 때 이미지를 로드하게 된다
@@ -40,7 +43,10 @@ function Card(props) {
 
   return (
     <div className='Card text-center'>
-      <img data-src={props.image} ref={imgRef} />
+      <picture>
+        <source data-srcset={props.webp} type='image/webp' />
+        <img data-src={props.image} ref={imgRef} />
+      </picture>
       <div className='p-5 font-semibold text-gray-700 text-xl md:text-lg lg:text-xl keep-all'>
         {props.children}
       </div>
