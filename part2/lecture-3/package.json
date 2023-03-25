@@ -15,14 +15,11 @@
     "tailwindcss": "^1.1.4"
   },
   "scripts": {
-    "start": "npm run build:style && react-scripts start",
-    "build": "npm run build:style && react-scripts build",
+    "start": "npm run build:style && react-app-rewired start",
+    "build": "npm run build:style && react-app-rewired build",
     "build:style": "postcss src/tailwind.css -o src/styles.css",
     "serve": "node ./server/server.js",
     "server": "node ./node_modules/json-server/lib/cli/bin.js --watch ./server/database.json -c ./server/config.json"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
   },
   "browserslist": {
     "production": [
