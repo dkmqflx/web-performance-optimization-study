@@ -12,8 +12,13 @@ function App() {
     <AppWrap>
       <GlobalStyle />
       <Header />
+      {/* 메뉴 */}
+
       <PhotoListContainer />
+      {/* 이미지 리스트 */}
+
       <ImageModalContainer />
+      {/* 이미지 클릭했을 때 모달 */}
     </AppWrap>
   );
 }
