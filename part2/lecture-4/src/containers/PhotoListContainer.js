@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector, shallowEqual } from 'react-redux';
+import { createSelector } from 'reselect';
 import PhotoList from '../components/PhotoList';
 import { fetchPhotos } from '../redux/photos';
+import selectFilteredPhotos from '../redux/selectFilteredPhotos';
 
 function PhotoListContainer() {
   const dispatch = useDispatch();
@@ -32,17 +34,31 @@ function PhotoListContainer() {
 
   // 바깥에서 filter 하도록 코드를 수정해준다.
   // 이렇게 코드를 수정해주면 더 이상 모달을 열고 닫을 때 이미지 리스트가 렌더링 되지 않는다
-  const { allPhotos, loading, category } = useSelector(
-    state => ({
-      allPhotos: state.photos.data,
-      loading: state.photos.loading,
-      category: state.category.category,
-    }),
-    shallowEqual
-  );
+  // const { allPhotos, loading, category } = useSelector(
+  //   state => ({
+  //     allPhotos: state.photos.data,
+  //     loading: state.photos.loading,
+  //     category: state.category.category,
+  //   }),
+  //   shallowEqual
+  // );
 
-  const photos =
-    category === 'all' ? allPhotos : allPhotos.filter(photo => photo.category === category);
+  // const photos =
+  // category === 'all' ? allPhotos : allPhotos.filter(photo => photo.category === category);
+
+  // store에서 photo 데이터를 가져와서, 리턴해준다
+  // const selectFilteredPhotos = createSelector(
+  //   [state => state.photos.data, state => state.category.category],
+  //   (photos, category) =>
+  //     category === 'all' ? photos : photos.filter(photo => photo.category === category)
+  // );
+
+  // selectFilteredPhotos 결과값을 리턴하게 된다
+  const photos = useSelector(selectFilteredPhotos);
+  // 이렇게 되면 Filter 로직을 밖으로 뺄 필요가 없다
+
+  // 로딩 state은 따로 분리
+  const loading = useSelector(state => state.photos.loading);
 
   if (loading === 'error') {
     return <span>Error!</span>;
