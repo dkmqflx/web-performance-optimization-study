@@ -5,9 +5,12 @@ import { setCategory } from '../redux/category';
 
 function Header() {
   const dispatch = useDispatch();
-  const { category } = useSelector(state => ({
-    category: state.category.category,
-  }));
+  // 오브젝트 형태가 아닌 단순 state 비교하도록 수정
+  const category = useSelector(state => state.category.category);
+
+  // const { category } = useSelector(state => ({
+  //   category: state.category.category,
+  // }));
 
   return (
     <HeaderWrap>
