@@ -1,11 +1,9 @@
-import memoize from './memoize';
+const cache = {};
 
-export const getAverageColorOfImage = memoize(function (imgElement) {
-  /**
-   * 이미지가 픽셀로 구성되어 있는데
-   * 각 픽셀의 컬러가 무엇인지 RGB 계산해서, 해당 값들에 대한 평균을 구한다
-   */
-
+export function getAverageColorOfImage(imgElement) {
+  if (cache.hasOwnProperty(imgElement.src)) {
+    return cache[imgElement.src];
+  }
   const canvas = document.createElement('canvas');
   const context = canvas.getContext && canvas.getContext('2d');
   const averageColor = {
@@ -23,24 +21,27 @@ export const getAverageColorOfImage = memoize(function (imgElement) {
   const height = (canvas.height =
     imgElement.naturalHeight || imgElement.offsetHeight || imgElement.height);
 
-  context.drawImage(imgElement, 0, 0);
+  canvas.width = width / 2;
+  canvas.height = height / 2;
 
-  const imageData = context.getImageData(0, 0, width, height).data;
-  // Performance 탭에서 확인했듯이 getAverageColorOfImage 아래있는 getImageData 함수도 오래 걸렸다
-  // 하지만 getImageData는 context에 있는 함수이기 때문에 수정 불가
-  // 따라서 메모이제이션 기법을 적용한다
+  context.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height).data;
+
   const length = imageData.length;
 
-  for (let i = 0; i < length; i += 4) {
+  for (let i = 0; i < length; i += 40) {
     averageColor.r += imageData[i];
     averageColor.g += imageData[i + 1];
     averageColor.b += imageData[i + 2];
   }
 
-  const count = length / 4;
+  const count = length / 40;
   averageColor.r = ~~(averageColor.r / count); // ~~ => convert to int
   averageColor.g = ~~(averageColor.g / count);
   averageColor.b = ~~(averageColor.b / count);
 
+  cache[imgElement] = averageColor;
+
   return averageColor; // 평균을 객체 형태로 반환한다
-});
+}
